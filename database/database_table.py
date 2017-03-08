@@ -9,49 +9,134 @@ __metaclass__ = type
 
 class db:
 
-    def __init__(self,dbdir,tabledir):
+    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
         self.dbdir=dbdir
-        self.tabledir=tabledir
+        self.filedir=filedir
+        self.flistdir=flistdir
+        self.updtlstdir=updtlstdir
+        self.netvaldir=netvaldir
 
     def dbexist(self):
         # 若db不存在则不能写入table,db创建在类外实现
         return os.path.exists(self.dbdir)
 
-    def tbexist(self):
+    def tbexist(self,tbdir):
         # table 不存在则不能调用 write_table
         conn=sqlite3.connect(self.dbdir)
         c=conn.cursor()
         exeline='SELECT name FROM sqlite_master WHERE type=\'table\' '
         c.execute(exeline)
         alltables=c.fetchall()
-        tbname=(self.get_tablename(),)
+        tbname=(self.get_tablename(tbdir),)
         conn.close()
         return tbname in alltables
 
-    def get_tablename(self):
+    def get_tablename(self,tbdir):
         pass
 
-    def get_tbtitles(self):
+    def get_tbtitles(self,tbdir):
         pass
 
-    def write_table(self):
+    def write_table(self,tbdir):
         # 写入前数据库必须存在
         # 写入失败则删除表格
         pass
 
+    def update_tables(self):
+        # 检查是否有新文件，如有则更新,并把更新后的文件写入到 flistdir 中
+        # 检测是否存在 flistdir 是否存在，不存在则建立一个
+        # 检查新增加的文件
+        filelist_w=open(self.flistdir,'a+')
+        filelist_r=open(self.flistdir)
+        try:
+            files=filelist_r.readlines()
+            savedtbs=set([tb.strip() for tb in files])
+            currntbs=set(os.listdir(self.filedir))
+            newaddtbs=sorted(list(currntbs.difference(savedtbs)))
+            try:
+                newaddtbs.remove('list.txt')
+            except ValueError:
+                pass
+            # 写入新增加的文件
+            sqlite3.connect(self.dbdir)
+            for dumi in range(len(newaddtbs)):
+                tabledir=self.filedir+newaddtbs[dumi]
+                self.write_table(tabledir)
+                filelist_w.write(newaddtbs[dumi]+'\n')   # 更新 list
+        except ValueError:
+            print('Error in updating db')
+            raise
+        finally:
+            filelist_r.close()
+            filelist_w.close()
+
+    def get_updtlst(self):
+        if not self.dbexist():
+            print('Data db does NOT exist!')
+            return
+        conn_db=sqlite3.connect(self.dbdir)
+        cd=conn_db.cursor()
+        try:
+            dbtbs=cd.execute(' SELECT name FROM sqlite_master WHERE type=\'table\' ').fetchall()
+        except:
+            raise
+        finally:
+            conn_db.close()
+
+        netfile=open(self.updtlstdir)
+        try:
+            nettbs=netfile.readlines()
+        except:
+            raise
+        finally:
+            netfile.close()
+
+        dbtables=[]
+        [dbtables.append(val[0]) for val in dbtbs]
+        nettables=[]
+        [nettables.append(val.strip()) for val in nettbs]
+        difftb=sorted(list(set(dbtables).difference(set(nettables))))
+        return difftb
+
+    def update_netval(self):
+        updtlst=self.get_updtlst()
+
+        conn_netval=sqlite3.connect(self.netvaldir)
+        conn_db=sqlite3.connect(self.dbdir)
+        cn=conn_netval.cursor()
+        cd=conn_db.cursor()
+
+        try:
+            nettbs=cn.execute(' SELECT name FROM sqlite_master WHERE type=\'table\' ').fetchall()
+            if not ('Net_Values',) in nettbs:
+                print('Net_Values table created')
+                cn.execute('CREATE TABLE Net_Values (share,asstot,liatot,nettot)')
+                for dumi in range(len(updtlst)):
+                    tb=updtlst[dumi]
+                    exeline='SELECT 科目代码,市值本币 FROM '+ tb +' WHERE 科目代码 IN (\'实收资本\',\'资产合计\',\'负债合计\',\'资产净值\')'
+                    rawstaff=cd.execute(exeline).fetchall()
+                    cn.execute("INSERT INTO Net_Values VALUES (?,?,?,?)" , (rawstaff[0][-1], rawstaff[1][-1],rawstaff[2][-1],rawstaff[3][-1]) )
+                    conn_netval.commit()
+                    print((rawstaff[0][1], rawstaff[1][-1],rawstaff[2][-1],rawstaff[3][-1]))
+        except:
+            raise
+        finally:
+            conn_netval.close()
+            conn_db.close()
+
 
 
 class Baiquan1_db(db):
-    def __init__(self,dbdir,tabledir):
-        super(Baiquan1_db,self).__init__(dbdir,tabledir)
+    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
+        super(Baiquan1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
 
-    def get_tablename(self):
-        strings=self.tabledir.split('\\')
+    def get_tablename(self,tbdir):
+        strings=tbdir.split('\\')
         tempname=strings[-1]
         return tempname.split('.')[0][5:]
 
-    def get_tbtitles(self):
-        data=xlrd.open_workbook(self.tabledir)
+    def get_tbtitles(self,tbdir):
+        data=xlrd.open_workbook(tbdir)
         table = data.sheets()[0]          #通过索引顺序获取
         #table2 = data.sheet_by_index(0) #通过索引顺序获取
         #table3 = data.sheet_by_name(u'Sheet1')#通过名称获取
@@ -66,17 +151,17 @@ class Baiquan1_db(db):
                         titles[dumj-1]+='原币'
                 return titles
 
-    def write_table(self):
+    def write_table(self,tbdir):
         hasdb=self.dbexist()  # 写入前数据库必须存在，数据库的建立在方法外实现
         if not hasdb:
             print('Database does NOT exist, no update!')
             return False
-        hastb=self.tbexist()
+        hastb=self.tbexist(tbdir)
         if hastb:
             print('Table already exists, no update!')
             return False
         # 寻找起始行
-        data=xlrd.open_workbook(self.tabledir)
+        data=xlrd.open_workbook(tbdir)
         table = data.sheets()[0]
         startline=0
         for dumi in range(table.nrows):
@@ -95,8 +180,8 @@ class Baiquan1_db(db):
         # 开始写入table
         conn=sqlite3.connect(self.dbdir)
         c=conn.cursor()
-        tablename=self.get_tablename()
-        titles=self.get_tbtitles()
+        tablename=self.get_tablename(tbdir)
+        titles=self.get_tbtitles(tbdir)
         titlenum=len(titles)
         titletrans= ('%s,'*titlenum)[0:(3*titlenum-1)] % tuple(titles)
         exeline=''.join(['CREATE TABLE ',tablename,' (',titletrans,') '])
@@ -120,26 +205,51 @@ class Baiquan1_db(db):
 
 
 class Jinqu1_db(Baiquan1_db):   # 进取和百泉1号相似较大
-    def __init__(self,dbdir,tabledir,filedir,flistdir):
-        super(Jinqu1_db,self).__init__(dbdir,tabledir)
+    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
+        super(Jinqu1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
 
-    def get_tablename(self):
-        strings=self.tabledir.split('\\')
+    def get_tablename(self,tbdir):
+        strings=tbdir.split('\\')
         tempname=strings[-1]
         return tempname.split('.')[0][6:]
 
 
-class Huijin1_db(Baiquan1_db):
-    def __init__(self,dbdir,tabledir,filedir,flistdir):
-        super(Baiquan1_db,self).__init__(dbdir,tabledir)
 
-    def get_tablename(self):
-        strings=self.tabledir.split('\\')
+class Huijin1_db(Baiquan1_db):
+    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
+        super(Baiquan1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
+
+    def get_tablename(self,tbdir):
+        strings=tbdir.split('\\')
         tempname=strings[-1]
         return tempname.split('.')[0][7:]
 
-    def get_tbtitles(self):
-        data=xlrd.open_workbook(self.tabledir)
+    def get_tbtitles(self,tbdir):
+        data=xlrd.open_workbook(tbdir)
+        table = data.sheets()[0]          #通过索引顺序获取
+        for dumi in range(table.nrows):
+            if '科目代码' in table.row_values(dumi):   # 识别标题行 避免采用第二行有 科目代码 的标题
+                titles=list(table.row_values(dumi))
+                titlenum=len(titles)
+                for dumj in range(titlenum):
+                    titles[dumj]=(titles[dumj]).replace('%','')   # 删除标题中的 “ % ”
+                return titles
+
+
+
+class Baiquan2_db(Baiquan1_db):
+    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
+        super(Baiquan2_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
+
+    def get_tablename(self,tbdir):
+        strings=tbdir.split('\\')
+        tempname=strings[-1]
+        tbdate=tempname.split('.')[0][-10:]
+        tbdate=tbdate.replace('-','')
+        return '百泉二号私募证券投资基金'+tbdate
+
+    def get_tbtitles(self,tbdir):
+        data=xlrd.open_workbook(tbdir)
         table = data.sheets()[0]          #通过索引顺序获取
         for dumi in range(table.nrows):
             if '科目代码' in table.row_values(dumi):   # 识别标题行 避免采用第二行有 科目代码 的标题

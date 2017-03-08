@@ -1,0 +1,11 @@
+
+from src.Baiquan1 import *
+
+class Jinqu1_db(Baiquan1_db):   # 进取和百泉1号相似较大
+    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
+        super(Jinqu1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
+
+    def get_tablename(self,tbdir):
+        strings=tbdir.split('\\')
+        tempname=strings[-1]
+        return tempname.split('.')[0][6:]

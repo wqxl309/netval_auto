@@ -1,5 +1,5 @@
-#from database.db_manipulation import *
-from database.database_table import *
+
+from src.Baiquan1 import *
 import os
 import time
 import sqlite3
@@ -19,31 +19,26 @@ import sqlite3
 #    print( ' Elasped time %f seconds' % (time.time()-start) )
 
 
-dbdir=r'E:\估值表数据库\Huijin1.db'
-allfiledir=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号'+'\\'
-filelist=open(r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号\list.txt')
-
-sqlite3.connect(dbdir)
-list=filelist.readlines()
-for dumi in range(len(list)):
-    start=time.time()
-    filename=(list[dumi]).strip()
-    tabledir=allfiledir+filename
-    temp=Huijin1_dbtb(dbdir,tabledir,allfiledir,filelist)
-    temp.write_table()
-
-    print( ' Elasped time %f seconds' % (time.time()-start) )
+dbdirJQ=r'E:\估值表数据库\Jinqu1.db'
+filedirJQ=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉进取一号'+'\\'
+flistdirJQ=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉进取一号\list.txt'
 
 
-    def db_construct(self):
-        sqlite3.connect(self.dbdir)
-        filelist=open(self.flistdir)
-        list=filelist.readlines()
-        for dumi in range(len(list)):
-            start=time.time()
-            filename=(list[dumi]).strip()
-            tabledir=self.filedir+filename
-            temp=Huijin1_dbtb(dbdir,tabledir,allfiledir,filelist)
-            temp.write_table()
+dbdirHJ=r'E:\估值表数据库\Huijin1.db'
+filedirHJ=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号'+'\\'
+flistdirHJ=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号\list.txt'
 
-            print( ' Elasped time %f seconds' % (time.time()-start) )
+dbdirBQ1=r'E:\估值表数据库\Baiquan1.db'
+filedirBQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉一号'+'\\'
+flistdirBQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉一号\list.txt'
+netvaldirBQ1=r'E:\净值表\netvalBQ1.db'
+updtlstdirBQ1=r'E:\净值表\netvalBQ1.txt'
+
+dbdirBQ2=r'E:\估值表数据库\Baiquan2.db'
+filedirBQ2=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉二号'+'\\'
+flistdirBQ2=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉二号\list.txt'
+
+
+obj=Baiquan1_db(dbdirBQ1,filedirBQ1,flistdirBQ1,updtlstdirBQ1,netvaldirBQ1)
+print ( obj.get_updtlst() )
+
