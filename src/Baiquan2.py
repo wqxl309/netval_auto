@@ -1,7 +1,7 @@
 
-from src.Baiquan1 import *
+from src.base_class import *
 
-class Baiquan2_db(Baiquan1_db):
+class Baiquan2_db(db):
     def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
         super(Baiquan2_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
 

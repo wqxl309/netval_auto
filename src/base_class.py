@@ -18,6 +18,12 @@ class db:
         # 若db不存在则不能写入table,db创建在类外实现
         return os.path.exists(self.dbdir)
 
+    def get_tablename(self,tbdir):
+        pass
+
+    def get_tbtitles(self,tbdir):
+        pass
+
     def tbexist(self,tbdir):
         # table 不存在则不能调用 write_table
         conn=sqlite3.connect(self.dbdir)
@@ -29,16 +35,59 @@ class db:
         conn.close()
         return tbname in alltables
 
-    def get_tablename(self,tbdir):
-        pass
-
-    def get_tbtitles(self,tbdir):
-        pass
-
     def write_table(self,tbdir):
         # 写入前数据库必须存在
         # 写入失败则删除表格
-        pass
+        hasdb=self.dbexist()  # 写入前数据库必须存在，数据库的建立在方法外实现
+        if not hasdb:
+            print('Database does NOT exist, no update!')
+            return False
+        hastb=self.tbexist(tbdir)
+        if hastb:
+            print('Table already exists, no update!')
+            return False
+        # 寻找起始行
+        data=xlrd.open_workbook(tbdir)
+        table = data.sheets()[0]
+        startline=0
+        for dumi in range(table.nrows):
+            try:
+                # 检查首个元素类型，如果能转换为数值则为应该记录的行的起始行
+                int(table.row_values(dumi)[0])
+            except ValueError:
+                if table.row_values(dumi)[0]=='1级科目':
+                    startline=dumi
+                    break
+                else:
+                    continue
+            else:
+                startline=dumi
+                break
+        # 开始写入table
+        conn=sqlite3.connect(self.dbdir)
+        c=conn.cursor()
+        tablename=self.get_tablename(tbdir)
+        titles=self.get_tbtitles(tbdir)
+        titlenum=len(titles)
+        titletrans= ('%s,'*titlenum)[0:(3*titlenum-1)] % tuple(titles)
+        exeline=''.join(['CREATE TABLE ',tablename,' (',titletrans,') '])
+        c.execute(exeline)
+        print('Table '.join([tablename,' created!']))
+
+        try:
+            for dumi in range(startline,table.nrows):
+                exeline=''.join(['INSERT INTO ',tablename,' VALUES (',('?,'*titlenum)[0:(2*titlenum-1)],')'])
+                c.execute(exeline , tuple(table.row_values(dumi)))
+                conn.commit()
+        except:   # 无论任何原因导致写入table失败，则都要删除未写完的table
+            print('Writing table failed ! ')
+            conn.execute('DROP TABLE '.join(tablename))
+            raise
+        else:
+            print('Table '.join([tablename,' updated !']))
+        finally:
+            conn.close()
+
 
     def update_tables(self):
         # 检查是否有新文件，如有则更新,并把更新后的文件写入到 flistdir 中
@@ -68,6 +117,7 @@ class db:
             filelist_r.close()
             filelist_w.close()
 
+
     def get_updtlst(self):
         if not self.dbexist():
             print('Data db does NOT exist!')
@@ -96,16 +146,14 @@ class db:
         difftb=sorted(list(set(dbtables).difference(set(nettables))))
         return difftb
 
+
     def update_netval(self):
         updtlst=self.get_updtlst()
-
         conn_netval=sqlite3.connect(self.netvaldir)
         conn_db=sqlite3.connect(self.dbdir)
         cn=conn_netval.cursor()
         cd=conn_db.cursor()
-
         netfile=open(self.updtlstdir,'a+')
-
         try:
             nettbs=cn.execute(' SELECT name FROM sqlite_master WHERE type=\'table\' ').fetchall()
             if not ('Net_Values',) in nettbs:

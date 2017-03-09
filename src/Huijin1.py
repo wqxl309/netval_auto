@@ -1,9 +1,9 @@
 
-from src.Baiquan1 import *
+from src.base_class import *
 
-class Huijin1_db(Baiquan1_db):
+class Huijin1_db(db):
     def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
-        super(Baiquan1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
+        super(Huijin1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')
