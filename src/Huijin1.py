@@ -2,8 +2,9 @@
 from src.base_class import *
 
 class Huijin1_db(db):
-    def __init__(self,dbdir,filedir,flistdir,updtlstdir,netvaldir):
-        super(Huijin1_db,self).__init__(dbdir,filedir,flistdir,updtlstdir,netvaldir)
+    def __init__(self,dbdir,filedir,flistdir,netvaldir):
+        self.ipodate=dt.date(2016,11,24)
+        super(Huijin1_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')
@@ -20,3 +21,8 @@ class Huijin1_db(db):
                 for dumj in range(titlenum):
                     titles[dumj]=(titles[dumj]).replace('%','')   # 删除标题中的 “ % ”
                 return titles
+
+    def update_netval_data(self,codedict=None):
+        codedict={'sharenum':'实收资本','assettot':'资产类合计:','debttot':'负债类合计:','assetnet':'基金资产净值:','servfee':'220501',
+                  'keepfee':'220701','mangfee':'220601','earn':'220602','buy':'120701','sell':'220301'}
+        super(Huijin1_db,self).update_netval_data(codedict)
