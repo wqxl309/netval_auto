@@ -94,8 +94,10 @@ class db:
             for tl in titles:
                 if tl in ('科目代码', '科目名称', '币种','科目级别'):
                     titlestr.append(tl+' TEXT,')
-                else:
+                elif len(tl)>0:
                     titlestr.append(tl+' REAL,')
+                else:
+                    titlestr.append(tl)
             titletrans=''.join(titlestr)[:-1]
             exeline=''.join(['CREATE TABLE ',tablename,' (',titletrans,') '])
             c.execute(exeline)
@@ -107,7 +109,8 @@ class db:
                     conn.commit()
             except:   # 无论任何原因导致写入table失败，则都要删除未写完的table
                 print('Writing table failed ! ')
-                conn.execute('DROP TABLE '.join(tablename))
+                exeline='DROP TABLE '+tablename
+                conn.execute(exeline)
                 raise
             else:
                 print('Table '.join([tablename,' updated !']))
@@ -243,7 +246,7 @@ class db:
                            outdict['servfee'],outdict['keepfee'],outdict['mangfee'],outdict['earn'],outdict['buy'],outdict['sell']) )
                 cn.execute("INSERT INTO Processed_Tables VALUES (?)" , (tb,) )
                 conn_net.commit()
-                print(tb[-8:],tb[-8:],outdict['sharenum'],outdict['assettot'],outdict['debttot'],outdict['assetnet'],
+                print(tb[-8:],outdict['sharenum'],outdict['assettot'],outdict['debttot'],outdict['assetnet'],
                            outdict['servfee'],outdict['keepfee'],outdict['mangfee'],outdict['earn'],outdict['buy'],outdict['sell'])
                 print( tb+' update finished ! ' )
         except:
@@ -321,8 +324,8 @@ class db:
             denominator=comptot.values[:-1]+(idxchg_TCm1*inout2+idxchg_TC.values*inout)[1:]
             rets[1:]=numerator/denominator-1
             amtchg[1:]=comptot.values[1:]-comptot.values[:-1]+paid.values[1:]-inout[1:]
-            netvals=pd.DataFrame(np.column_stack([dates.values,paid,netreal,np.cumprod(1+rets),rets,amtchg,np.cumsum(amtchg)]),
-                                 columns=['Date','Paid','NetSingle','NetCumulated','Returns','AmtChg','AmtCumChg'])
+            netvals=pd.DataFrame(np.column_stack([dates.values,netreal,np.cumprod(1+rets),rets,amtchg,np.cumsum(amtchg)]),
+                                 columns=['Date','NetSingle','NetCumulated','Returns','AmtChg','AmtCumChg'])
             # sql.to_sql(pd.concat([sorteddata,netvals],axis=1),name='Net_Values',con=conn_net,if_exists='replace')
             sql.to_sql(netvals,name='Net_Values',con=conn_net,if_exists='replace')
             # plt.figure()

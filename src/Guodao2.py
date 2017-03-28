@@ -1,16 +1,16 @@
-
 from src.base_class import *
 
-
-class Baiquan1_db(db):
+class Guodao2_db(db):
     def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        self.ipodate=dt.date(2016,1,4)
-        super(Baiquan1_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+        self.ipodate=dt.date(2016,12,1)
+        super(Guodao2_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')
         tempname=strings[-1]
-        return tempname.split('.')[0][5:]
+        tempname2=tempname.split('.')[0]
+        tempname3=tempname2.split('_')
+        return tempname3[1]+tempname3[4]
 
     def get_tbtitles(self,tbdir):
         data=xlrd.open_workbook(tbdir)
@@ -27,7 +27,6 @@ class Baiquan1_db(db):
                 return titles
 
     def update_netval_data(self,codedict=None):
-        # 需确认个字段， 以及个字段数值是否在 “成本本币” 栏目下
-        codedict={'sharenum':'实收资本','assettot':'资产合计','debttot':'负债合计','assetnet':'资产净值','servfee':'2206.14',
+        codedict={'sharenum':'实收资本','assettot':'资产合计','debttot':'负债合计','assetnet':'资产净值','servfee':'2208.02',
                   'keepfee':'2207.01','mangfee':'2206.01','earn':'2206.02','buy':'1207.01','sell':'2203.01'}
-        super(Baiquan1_db,self).update_netval_data(codedict)
+        super(Guodao2_db,self).update_netval_data(codedict)
