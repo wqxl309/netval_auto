@@ -2,8 +2,11 @@ from src.base_class import *
 
 class Guodao2_db(db):
     def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        self.ipodate=dt.date(2016,12,1)
         super(Guodao2_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+        self.productname='GuoDao2'
+        self.ipodate=dt.date(2016,12,1)
+        self.confirmdays=2
+        self.net_digits=3
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')

@@ -3,8 +3,11 @@ from src.base_class import *
 
 class Baiquan2_db(db):
     def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        self.ipodate=dt.date(2016,12,30)
         super(Baiquan2_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+        self.productname='BaiQuan2'
+        self.ipodate=dt.date(2016,12,30)
+        self.confirmdays=2
+        self.net_digits=4
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')

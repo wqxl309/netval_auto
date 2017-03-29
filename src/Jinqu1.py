@@ -3,8 +3,11 @@ from src.base_class import *
 
 class Jinqu1_db(db):   # 进取和百泉1号相似较大
     def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        self.ipodate=dt.date(2016,11,3)
         super(Jinqu1_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+        self.productname='JinQu1'
+        self.ipodate=dt.date(2016,11,3)
+        self.confirmdays=2
+        self.net_digits=4
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')

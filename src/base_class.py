@@ -1,3 +1,4 @@
+
 import sqlite3
 import xlrd
 import os
@@ -5,8 +6,10 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
+import matplotlib.dates as mpdt
 from WindPy import *
 from pandas.io import sql
+from src.help_functions import *
 import time
 
 __metaclass__ = type
@@ -26,6 +29,10 @@ class db_connect:
 class db:
 
     def __init__(self,dbdir,filedir,flistdir,netvaldir):
+        self.productname=None
+        self.ipodate=None
+        self.confirmdays=None
+        self.net_digits=None
         if not os.path.exists(flistdir):
             os.system('type null > '+filedir)
         self.dbdir=dbdir
@@ -256,51 +263,46 @@ class db:
             conn_db.close()
 
 
-    def generate_netvalue(self,digits,confirmdays):
+    def generate_netvalues(self):
         # 从头计算净值表，包括全部日期（包含非交易日）
+        digits=self.net_digits
+        confirmdays=self.confirmdays
         start=time.time()
         w.start()
         print(time.time()-start)
         with db_connect(self.netvaldir) as conn_net:
             data=pd.read_sql('SELECT * FROM Net_Values_Base',conn_net)
             sorteddata=data.sort_values(['date'],ascending=[1])
-
-            # diff1=-sorteddata['servfee'].diff()
-            # diff1[diff1<=0]=0
-            # diff1[0]=0
-            # diff2=-sorteddata['mangfee'].diff()
-            # diff2[diff2<=0]=0
-            # diff2[0]=0
-            # diff3=-sorteddata['earn'].diff()
-            # diff3[diff3<=0]=0
-            # diff3[0]=0
-            # fees=pd.concat([diff1,diff2,diff3],axis=1)  # type: pd.DataFrame
-
+            dates=sorteddata['date']
+            # 检查缺失交易日期，如果有缺失则只生成至缺失交易日前一（交易）日； 有交易日就应该有估值表，反之不然
+            firstdate=dates.values[0]
+            lastdate=dates.values[-1]
+            tdays=w.tdays(firstdate,lastdate).Times
+            trddays=pd.DataFrame([dt.datetime.strftime(t,'%Y%m%d') for t in tdays])
+            hastrd=~trddays.isin(dates.values)
+            trdmiss=trddays[hastrd.values]
+            if not trdmiss.empty:
+                # 截止到第一个缺失交易日前的一个交易日
+                cutdate=dt.datetime.strftime(w.tdaysoffset(-1,trdmiss.values[0][0]).Times[0],'%Y%m%d')
+                cutpos=dates<=cutdate
+                sorteddata=sorteddata[cutpos]
+            dates=sorteddata['date']
             fees=-(sorteddata.loc[:,['servfee','keepfee','mangfee','earn']].diff())
             fees[fees<=0]=0
             fees.loc[0,:]=0
             paid=fees.sum(axis=1)
-
-            dates=sorteddata['date']
             comptot=sorteddata['assettot']-sorteddata['sell']  # 资产总额扣除应付赎回款
             netreal=sorteddata['assetnet']/sorteddata['sharenum'] # 真实净值
             sharechg=sorteddata['sharenum'].diff()
             sharechg[0]=0
-
             # 和前一个数值相比, 确定 confirm date (T+C) 的位置
             idxchg_TC=sharechg!=0 # type: pd.DataFrame
             idxchg_TC[0]=False
             chgpos_TC=idxchg_TC[idxchg_TC.values].index
-
-            # 和后一个数值相比，很确定 confirm date-1 (T+C-1) 的位置
-            #idxchg_TCm1=pd.concat([idxchg_TC[1:] , pd.DataFrame([False])],ignore_index=True)  # type: pd.DataFrame
-            #chgpos_TCm1=idxchg_TCm1[idxchg_TCm1.values].index
-
             chgdate=dates[chgpos_TC].values
             opendt=[w.tdaysoffset(-confirmdays,c).Times[0] for c in chgdate] # 开放日 in wind format
             opendate=[dt.datetime.strftime(t,'%Y%m%d') for t in opendt]  # 开放日, T
             openidx=dates.isin(opendate)  # 开放日位置
-
             inout=np.zeros_like(netreal)
             inout2=np.zeros_like(netreal)
             inout[chgpos_TC] =np.round(netreal[openidx.values].values,digits)*sharechg[chgpos_TC].values
@@ -316,7 +318,6 @@ class db:
                     idxchg_TCm1[dumi]=1
                 elif mydt>=chgdate[opennum]:
                     opennum+=1
-
             # 分子，与确认日对齐
             rets=np.zeros_like(netreal)
             amtchg=np.zeros_like(netreal)
@@ -324,25 +325,120 @@ class db:
             denominator=comptot.values[:-1]+(idxchg_TCm1*inout2+idxchg_TC.values*inout)[1:]
             rets[1:]=numerator/denominator-1
             amtchg[1:]=comptot.values[1:]-comptot.values[:-1]+paid.values[1:]-inout[1:]
-            netvals=pd.DataFrame(np.column_stack([dates.values,netreal,np.cumprod(1+rets),rets,amtchg,np.cumsum(amtchg)]),
+            netvals=pd.DataFrame(np.column_stack([dates.values,netreal,np.cumprod(1+rets)*netreal[0],rets,amtchg,np.cumsum(amtchg)]),
                                  columns=['Date','NetSingle','NetCumulated','Returns','AmtChg','AmtCumChg'])
             # sql.to_sql(pd.concat([sorteddata,netvals],axis=1),name='Net_Values',con=conn_net,if_exists='replace')
             sql.to_sql(netvals,name='Net_Values',con=conn_net,if_exists='replace')
+            print(time.time()-start)
             # plt.figure()
             # plt.plot(netvals['NetCumulated'].values-netvals['NetSingle'].values)
             # plt.show()
-
+            print('Netvalues updated from '+firstdate+' to '+dates.values[-1])
         #w.close()
 
 
-
-
-
-    def take_netvalue(self,startdate,enddate):
+    def update_netvalues(self):
         pass
 
-if __name__=='__main__':
-    #w.start()
-    # print (w.tdays('20161230','20171230','Days=Trading'))
-    # w.close()
-    pass
+    def take_netvalue(self,startdate=False,enddate=False,freq='DAY',indicators=True,plots=True,mktidx=('000300.SH','000905.SH'),outputdir=False):
+        start=time.time()
+        w.start()
+        print(time.time()-start)
+        with db_connect(self.netvaldir) as conn_net:
+            if not startdate:
+                startdate=self.ipodate.strftime('%Y%m%d')
+            if not enddate:
+                enddate=dt.datetime.today().strftime('%Y%m%d')
+            data=pd.read_sql(''.join(['SELECT * FROM Net_Values WHERE date >=',startdate,' AND date<=',enddate]),conn_net)
+            dates=data['Date']
+            head=dates.values[0]
+            tail=dates.values[-1]
+            if freq.upper()=='WEEK':
+                period='W'
+            elif freq.upper()=='MONTH':
+                period='M'
+            else:
+                period='D'
+            ttimes=w.tdays(head,tail,'Period='+period).Times
+            tperiods=[dt.datetime.strftime(t,'%Y%m%d') for t in ttimes]
+            needextra=False
+            if (tperiods[0] > head):
+                needextra=True
+                tperiods.insert(0,head)
+            trddata=data[dates.isin(tperiods)]
+
+            if outputdir:
+                output=trddata.loc[:,['Date','NetSingle','NetCumulated']]
+                output.to_csv(outputdir,index=False)
+            if indicators:
+                # 须确保输入的是numpy array
+                raw=calc_indicators(trddata.loc[:,['NetSingle','NetCumulated']].values)  # returns : mean,std,downstd,winrate,maxdd,maxwins,maxlosses
+                multiplier=(freq.upper()=='DAY')*250+(freq.upper()=='WEEK')*52+(freq.upper()=='MONTH')*12
+                indshow={}  # 年化收益率、最大回撤、年化波动率、年化下行波动率、夏普、所提诺、calmar，周期胜率，连续最大盈利周期数，连续最大亏损周期数
+                indshow['AnnRet']=raw['mean']*multiplier
+                indshow['AnnVol']=raw['std']*np.sqrt(multiplier)
+                indshow['AnnDownVol']=raw['downstd']*np.sqrt(multiplier)
+                indshow['MaxDd']=raw['maxdd']
+                indshow['Sharpe']=indshow['AnnRet']/indshow['AnnVol']
+                indshow['Sortino']=indshow['AnnRet']/indshow['AnnDownVol']
+                indshow['Calmar']=indshow['AnnRet']/np.abs(indshow['MaxDd'])
+                indshow['WinRate']=raw['winrate']
+                indshow['MaxWinsPrd']=raw['maxwinsnum']
+                indshow['MaxLossPrd']=raw['maxlossnum']
+                earnamt=trddata['AmtCumChg'][1:].values-trddata['AmtCumChg'][:-1].values
+                indshow['WinLossRate']=-np.sum(earnamt[earnamt>0])/np.sum(earnamt[earnamt<0])
+
+            if plots:
+                netsig=trddata['NetSingle'].values
+                netcum=trddata['NetCumulated'].values
+                netdate=trddata['Date']
+
+                if mktidx:
+                    winddata=w.wsd(mktidx,'close',head,tail,'Period='+period)
+                    if needextra:
+                        windex=w.wsd(mktidx,'close',head,head)
+                        exdata=np.array(windex.Data)
+                        idxdata=np.row_stack([exdata,np.array(winddata.Data).T])
+                    else:
+                        idxdata=np.array(winddata.Data).T
+                    tempidx=idxdata/idxdata[0,:]
+                    idxdata_sig=tempidx*netsig[0]
+                    idxdata_cum=tempidx*netcum[0]
+                    maxidx=np.max(np.max(idxdata_cum))
+                    minidx=np.min(np.min(idxdata_sig))
+                    plotlimits=[np.min([minidx,np.min(netsig)])*0.8,np.max([maxidx,np.min(netcum)])*1.2]
+                else:
+                    plotlimits=[np.min(netsig)*0.8,np.min(netcum)*1.2]
+
+                fig=plt.figure(figsize=(20,15))
+                showdatenum=20
+                N=len(netdate)
+                if N<=showdatenum:
+                    showidx=[x for x in range(N)]
+                else:
+                    step=int(np.floor(N/showdatenum))
+                    showidx=[x for x in range(0,N,step)]
+                    if N-1-showidx[-1]>=step/2:
+                        showidx.append(N-1)
+
+                ax=fig.add_subplot(121)
+                ax.set_ylim(plotlimits)
+                ax.plot(netsig,'r',lw=2,label=self.productname)
+                colors=['g','b']
+                for dumi in range(len(mktidx)):
+                    ax.plot(idxdata_sig[:,dumi],colors[dumi],label=mktidx[dumi],lw=2)
+                plt.xticks(rotation=70)
+                plt.xticks(showidx,netdate.iloc[showidx])
+                plt.legend(loc='upper left')
+                #ax.xaxis.set_major_formatter(mpdt.DateFormatter('%Y-%m-%d'))
+                #plt.xticks(pd.date_range(trddata['NetSingle'].index[0],trddata['NetSingle'].index[-1],freq='1min'))
+                ax2=fig.add_subplot(122)
+                ax2.set_ylim(plotlimits)
+                ax2.plot(netcum,'r',lw=2,label=self.productname)
+                colors2=['b','gray']
+                for dumi in range(len(mktidx)):
+                    ax2.plot(idxdata_cum[:,dumi],colors2[dumi],label=mktidx[dumi],lw=2)
+                plt.xticks(rotation=70)
+                plt.xticks(showidx,netdate.iloc[showidx])
+                plt.legend(loc='upper left')
+                plt.show()
