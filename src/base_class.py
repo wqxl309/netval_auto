@@ -292,7 +292,16 @@ class db:
             fees.loc[0,:]=0
             paid=fees.sum(axis=1)
             comptot=sorteddata['assettot']-sorteddata['sell']  # 资产总额扣除应付赎回款
-            netreal=sorteddata['assetnet']/sorteddata['sharenum'] # 真实净值
+            netreal=sorteddata['assetnet']/sorteddata['sharenum'] # 真实(单位)净值
+
+            bookearn=sorteddata['earn'].diff()
+            bookearn.iloc[0]=0
+            bookearn[bookearn<0]=0
+
+            cumret=((sorteddata['assetnet'].values[1:]+bookearn.values[1:])/sorteddata['assetnet'].values[:-1])*(sorteddata['sharenum'].values[:-1]/sorteddata['sharenum'].values[1:])-1
+            cumret=np.row_stack([np.zeros([1,1]),np.reshape(cumret,[dates.__len__()-1,1])])
+            netcum=np.cumprod(1+cumret)*netreal[0]
+
             sharechg=sorteddata['sharenum'].diff()
             sharechg[0]=0
             # 和前一个数值相比, 确定 confirm date (T+C) 的位置
@@ -325,16 +334,12 @@ class db:
             denominator=comptot.values[:-1]+(idxchg_TCm1*inout2+idxchg_TC.values*inout)[1:]
             rets[1:]=numerator/denominator-1
             amtchg[1:]=comptot.values[1:]-comptot.values[:-1]+paid.values[1:]-inout[1:]
-            netvals=pd.DataFrame(np.column_stack([dates.values,netreal,np.cumprod(1+rets)*netreal[0],rets,amtchg,np.cumsum(amtchg)]),
-                                 columns=['Date','NetSingle','NetCumulated','Returns','AmtChg','AmtCumChg'])
-            # sql.to_sql(pd.concat([sorteddata,netvals],axis=1),name='Net_Values',con=conn_net,if_exists='replace')
+            netvals=pd.DataFrame(np.column_stack([dates.values,netreal,netcum,np.cumprod(1+rets)*netreal[0],rets,amtchg,np.cumsum(amtchg)]),
+                                 columns=['Date','NetSingle','NetCumulated','NetCompensated','Returns','AmtChg','AmtCumChg'])
             sql.to_sql(netvals,name='Net_Values',con=conn_net,if_exists='replace')
             print(time.time()-start)
-            # plt.figure()
-            # plt.plot(netvals['NetCumulated'].values-netvals['NetSingle'].values)
-            # plt.show()
             print('Netvalues updated from '+firstdate+' to '+dates.values[-1])
-        #w.close()
+        w.close()
 
 
     def update_netvalues(self):
@@ -367,12 +372,11 @@ class db:
                 tperiods.insert(0,head)
             trddata=data[dates.isin(tperiods)]
 
-            if outputdir:
-                output=trddata.loc[:,['Date','NetSingle','NetCumulated']]
-                output.to_csv(outputdir,index=False)
+            print('Periods from %s to %s' % (tperiods[0],tperiods[-1]))
+
             if indicators:
                 # 须确保输入的是numpy array
-                raw=calc_indicators(trddata.loc[:,['NetSingle','NetCumulated']].values)  # returns : mean,std,downstd,winrate,maxdd,maxwins,maxlosses
+                raw=calc_indicators(trddata.loc[:,['NetCumulated','NetCompensated']].values)  # returns : mean,std,downstd,winrate,maxdd,maxwins,maxlosses
                 multiplier=(freq.upper()=='DAY')*250+(freq.upper()=='WEEK')*52+(freq.upper()=='MONTH')*12
                 indshow={}  # 年化收益率、最大回撤、年化波动率、年化下行波动率、夏普、所提诺、calmar，周期胜率，连续最大盈利周期数，连续最大亏损周期数
                 indshow['AnnRet']=raw['mean']*multiplier
@@ -388,28 +392,31 @@ class db:
                 earnamt=trddata['AmtCumChg'][1:].values-trddata['AmtCumChg'][:-1].values
                 indshow['WinLossRate']=-np.sum(earnamt[earnamt>0])/np.sum(earnamt[earnamt<0])
 
-            if plots:
-                netsig=trddata['NetSingle'].values
-                netcum=trddata['NetCumulated'].values
-                netdate=trddata['Date']
+                for key in sorted(indshow.keys()):
+                    print(key+' : ',indshow[key] )
 
-                if mktidx:
-                    winddata=w.wsd(mktidx,'close',head,tail,'Period='+period)
-                    if needextra:
-                        windex=w.wsd(mktidx,'close',head,head)
-                        exdata=np.array(windex.Data)
-                        idxdata=np.row_stack([exdata,np.array(winddata.Data).T])
-                    else:
-                        idxdata=np.array(winddata.Data).T
-                    tempidx=idxdata/idxdata[0,:]
-                    idxdata_sig=tempidx*netsig[0]
-                    idxdata_cum=tempidx*netcum[0]
-                    maxidx=np.max(np.max(idxdata_cum))
-                    minidx=np.min(np.min(idxdata_sig))
-                    plotlimits=[np.min([minidx,np.min(netsig)])*0.8,np.max([maxidx,np.min(netcum)])*1.2]
+            netsig=trddata['NetCumulated'].values
+            netcum=trddata['NetCompensated'].values
+            netdate=trddata['Date']
+
+            if mktidx:
+                winddata=w.wsd(mktidx,'close',head,tail,'Period='+period)
+                if needextra:
+                    windex=w.wsd(mktidx,'close',head,head)
+                    exdata=np.array(windex.Data)
+                    idxdata=np.row_stack([exdata,np.array(winddata.Data).T])
                 else:
-                    plotlimits=[np.min(netsig)*0.8,np.min(netcum)*1.2]
+                    idxdata=np.array(winddata.Data).T
+                tempidx=idxdata/idxdata[0,:]
+                idxdata_sig=tempidx*netsig[0]
+                idxdata_cum=tempidx*netcum[0]
+                maxidx=np.max(np.max(idxdata_cum))
+                minidx=np.min(np.min(idxdata_sig))
+                plotlimits=[np.min([minidx,np.min(netsig)])*0.8,np.max([maxidx,np.min(netcum)])*1.2]
+            else:
+                plotlimits=[np.min(netsig)*0.8,np.min(netcum)*1.2]
 
+            if plots:
                 fig=plt.figure(figsize=(20,15))
                 showdatenum=20
                 N=len(netdate)
@@ -420,13 +427,14 @@ class db:
                     showidx=[x for x in range(0,N,step)]
                     if N-1-showidx[-1]>=step/2:
                         showidx.append(N-1)
-
                 ax=fig.add_subplot(121)
                 ax.set_ylim(plotlimits)
+                ax.set_xlim([showidx[0],showidx[-1]])
                 ax.plot(netsig,'r',lw=2,label=self.productname)
                 colors=['g','b']
-                for dumi in range(len(mktidx)):
-                    ax.plot(idxdata_sig[:,dumi],colors[dumi],label=mktidx[dumi],lw=2)
+                if mktidx:
+                    for dumi in range(len(mktidx)):
+                        ax.plot(idxdata_sig[:,dumi],colors[dumi],label=mktidx[dumi],lw=2)
                 plt.xticks(rotation=70)
                 plt.xticks(showidx,netdate.iloc[showidx])
                 plt.legend(loc='upper left')
@@ -434,11 +442,22 @@ class db:
                 #plt.xticks(pd.date_range(trddata['NetSingle'].index[0],trddata['NetSingle'].index[-1],freq='1min'))
                 ax2=fig.add_subplot(122)
                 ax2.set_ylim(plotlimits)
+                ax2.set_xlim([showidx[0],showidx[-1]])
                 ax2.plot(netcum,'r',lw=2,label=self.productname)
                 colors2=['b','gray']
-                for dumi in range(len(mktidx)):
-                    ax2.plot(idxdata_cum[:,dumi],colors2[dumi],label=mktidx[dumi],lw=2)
+                if mktidx:
+                    for dumi in range(len(mktidx)):
+                        ax2.plot(idxdata_cum[:,dumi],colors2[dumi],label=mktidx[dumi],lw=2)
                 plt.xticks(rotation=70)
                 plt.xticks(showidx,netdate.iloc[showidx])
                 plt.legend(loc='upper left')
                 plt.show()
+
+            if outputdir:
+                if mktidx:
+                    trdselect=trddata.loc[:,['Date','NetSingle','NetCumulated','NetCompensated']]
+                    mktidxdata=pd.DataFrame(idxdata,columns=mktidx,index=trdselect.index)
+                    output=pd.concat([trdselect,mktidxdata],axis=1)
+                else:
+                    output=trddata.loc[:,['Date','NetSingle','NetCumulated','NetCompensated']]
+                output.to_csv(outputdir,index=False)

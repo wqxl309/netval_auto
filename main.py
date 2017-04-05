@@ -33,12 +33,12 @@ netvaldirGD2=r'E:\netval_auto\netvalue\NetvalGD2.db'
 
 if __name__=='__main__':
     obj=Baiquan1_db(dbdirBQ1,filedirBQ1,flistdirBQ1,netvaldirBQ1)
-    #obj=Jinqu1_db(dbdirJQ,filedirJQ,flistdirJQ,netvaldirJQ)
-    #obj=Huijin1_db(dbdirHJ,filedirHJ,flistdirHJ,netvaldirHJ)
-    #obj=Baiquan2_db(dbdirBQ2,filedirBQ2,flistdirBQ2,netvaldirBQ2)
-    #obj=Guodao2_db(dbdirGD2,filedirGD2,flistdirGD2,netvaldirGD2)
+    # obj=Jinqu1_db(dbdirJQ,filedirJQ,flistdirJQ,netvaldirJQ)
+    # obj=Huijin1_db(dbdirHJ,filedirHJ,flistdirHJ,netvaldirHJ)
+    # obj=Baiquan2_db(dbdirBQ2,filedirBQ2,flistdirBQ2,netvaldirBQ2)
+    # obj=Guodao2_db(dbdirGD2,filedirGD2,flistdirGD2,netvaldirGD2)
 
-    #obj.update_tables()
-    #obj.update_netval_data()
-    #obj.generate_netvalues()
-    obj.take_netvalue(startdate='20170203',freq='day',indicators=None,plots=True,outputdir=r'C:\Users\Jiapeng\Desktop\temp.csv')
+    # obj.update_tables()
+    # obj.update_netval_data()
+    # obj.generate_netvalues()
+    obj.take_netvalue(freq='week',indicators=True,mktidx=False,plots=True,outputdir=r'C:\Users\Jiapeng\Desktop\temp.csv')

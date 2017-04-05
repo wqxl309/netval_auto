@@ -28,6 +28,6 @@ class Baiquan2_db(db):
                 return titles
 
     def update_netval_data(self,codedict=None):
-        codedict={'sharenum':'实收资本','assettot':'资产类合计:','debttot':'负债类合计:','assetnet':'基金资产净值:','servfee':'220501',
-                  'keepfee':'220701','mangfee':'220601','earn':'220602','buy':'120701','sell':'220301'}
+        codedict={'sharenum':'实收资本','assettot':'资产类合计:','debttot':'负债类合计:','assetnet':'基金资产净值:','servfee':'2205',
+                  'keepfee':'2207','mangfee':'2206','earn':'220602','buy':'120701','sell':'220301'}
         super(Baiquan2_db,self).update_netval_data(codedict)
