@@ -2,9 +2,13 @@
 from src.base_class import *
 
 class Baiquan2_db(db):
-    def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        super(Baiquan2_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+    def __init__(self,netvaldir=r'E:\netval_auto\netvalue\Netval.db'):
+        dbdirBQ2=r'E:\netval_auto\database\Baiquan2.db'
+        filedirBQ2=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉二号'+'\\'
+        flistdirBQ2=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉二号\list.txt'
+        super(Baiquan2_db,self).__init__(dbdirBQ2,filedirBQ2,flistdirBQ2,netvaldir)
         self.productname='BaiQuan2'
+        self.mandarine=u'百泉二号'
         self.ipodate=dt.date(2016,12,30)
         self.confirmdays=2
         self.net_digits=4

@@ -1,4 +1,6 @@
 import numpy as np
+import xlrd
+import xlwt
 
 
 def calc_indicators(netvals):
@@ -37,9 +39,22 @@ def calc_indicators(netvals):
             maxwin[:,newwin[0]]=wins[:,newwin[0]]
             maxlos[:,newlos[0]]=loss[:,newlos[0]]
     results['maxdd']=np.min(drawdowns,axis=0)
-    results['maxwinsnum']=maxwin
-    results['maxlossnum']=maxlos
+    results['maxwinsnum']=maxwin[0,:]
+    results['maxlossnum']=maxlos[0,:]
     return results
 
+
+def sqlite_to_excel(filedir,sheetname,overwirte=True):
+    """ write sqlite3 database to excel worksheet:
+        if no such file then create one
+        if no such sheet then create one """
+    file=xlrd.open_workbook(filedir)
+
+
 if __name__=='__main__':
-    print([x for x in range(0,10,3)])
+    outdir=r'C:\Users\Jiapeng\Desktop\BQ1.xlsx'
+    data = xlrd.open_workbook('outdir')
+    try:
+        table = data.sheet_by_name(u'b')
+    except xlrd.biffh.XLRDError as e:
+        print(e)

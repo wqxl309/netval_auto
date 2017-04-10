@@ -2,9 +2,13 @@
 from src.base_class import *
 
 class Huijin1_db(db):
-    def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        super(Huijin1_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+    def __init__(self,netvaldir=r'E:\netval_auto\netvalue\NetvalHJ1.db'):
+        dbdirHJ1=r'E:\netval_auto\database\Huijin1.db'
+        filedirHJ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号'+'\\'
+        flistdirHJ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号\list.txt'
+        super(Huijin1_db,self).__init__(dbdirHJ1,filedirHJ1,flistdirHJ1,netvaldir)
         self.productname='HuiJin1'
+        self.mandarine=u'百泉汇瑾一号'
         self.ipodate=dt.date(2016,11,24)
         self.confirmdays=2
         self.net_digits=3

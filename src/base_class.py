@@ -30,6 +30,7 @@ class db:
 
     def __init__(self,dbdir,filedir,flistdir,netvaldir):
         self.productname=None
+        self.mandarine=None
         self.ipodate=None
         self.confirmdays=None
         self.net_digits=None
@@ -345,6 +346,7 @@ class db:
     def update_netvalues(self):
         pass
 
+
     def take_netvalue(self,startdate=False,enddate=False,freq='DAY',indicators=True,plots=True,mktidx=('000300.SH','000905.SH'),outputdir=False):
         start=time.time()
         w.start()
@@ -372,7 +374,9 @@ class db:
                 tperiods.insert(0,head)
             trddata=data[dates.isin(tperiods)]
 
-            print('Periods from %s to %s' % (tperiods[0],tperiods[-1]))
+            print('Updating '+self.mandarine+ ' -- Periods from %s to %s' % (tperiods[0],tperiods[-1]))
+
+            output_results={}
 
             if indicators:
                 # 须确保输入的是numpy array
@@ -390,15 +394,16 @@ class db:
                 indshow['MaxWinsPrd']=raw['maxwinsnum']
                 indshow['MaxLossPrd']=raw['maxlossnum']
                 earnamt=trddata['AmtCumChg'][1:].values-trddata['AmtCumChg'][:-1].values
-                indshow['WinLossRate']=-np.sum(earnamt[earnamt>0])/np.sum(earnamt[earnamt<0])
-
+                #indshow['WinLossRate']=-np.sum(earnamt[earnamt>0])/np.sum(earnamt[earnamt<0])
+                indshow['ValueType']=[u'费后累计净值',u'费前净值']
+                print([u'费后累计净值',u'费前净值'])
                 for key in sorted(indshow.keys()):
                     print(key+' : ',indshow[key] )
+                output_results['indicators']=indshow
 
             netsig=trddata['NetCumulated'].values
             netcum=trddata['NetCompensated'].values
             netdate=trddata['Date']
-
             if mktidx:
                 winddata=w.wsd(mktidx,'close',head,tail,'Period='+period)
                 if needextra:
@@ -460,4 +465,11 @@ class db:
                     output=pd.concat([trdselect,mktidxdata],axis=1)
                 else:
                     output=trddata.loc[:,['Date','NetSingle','NetCumulated','NetCompensated']]
-                output.to_csv(outputdir,index=False)
+                if outputdir=='return data':
+                    output_results['outdata']=output
+                else:
+                    #output.to_csv(outputdir,index=False)
+                    writer=pd.ExcelWriter(outputdir)
+                    output.to_excel(writer,sheet_name=self.mandarine,index=False)
+
+        return output_results

@@ -2,9 +2,13 @@
 from src.base_class import *
 
 class Jinqu1_db(db):   # 进取和百泉1号相似较大
-    def __init__(self,dbdir,filedir,flistdir,netvaldir):
-        super(Jinqu1_db,self).__init__(dbdir,filedir,flistdir,netvaldir)
+    def __init__(self,netvaldir=r'E:\netval_auto\netvalue\NetvalJQ1.db'):
+        dbdirJQ1=r'E:\netval_auto\database\Jinqu1.db'
+        filedirJQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉进取一号'+'\\'
+        flistdirJQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉进取一号\list.txt'
+        super(Jinqu1_db,self).__init__(dbdirJQ1,filedirJQ1,flistdirJQ1,netvaldir)
         self.productname='JinQu1'
+        self.mandarine=u'百泉进取一号'
         self.ipodate=dt.date(2016,11,3)
         self.confirmdays=2
         self.net_digits=4
