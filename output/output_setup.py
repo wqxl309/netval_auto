@@ -77,7 +77,3 @@ def get_configure(confdir):
                 else:
                     result[title].append(cont)
     return result
-
-if __name__ == '__main__':
-    c=get_configure(r'..\configure.txt')
-    print(c)

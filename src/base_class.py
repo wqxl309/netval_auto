@@ -1,6 +1,5 @@
 
 import sqlite3
-import xlrd
 import os
 import pandas as pd
 import numpy as np
@@ -269,9 +268,7 @@ class db:
         # 从头计算净值表，包括全部日期（包含非交易日）
         digits=self.net_digits
         confirmdays=self.confirmdays
-        start=time.time()
         w.start()
-        print(time.time()-start)
         with db_connect(self.netvaldir) as conn_net:
             data=pd.read_sql('SELECT * FROM Net_Values_Base',conn_net)
             sorteddata=data.sort_values(['date'],ascending=[1])
@@ -339,7 +336,6 @@ class db:
             netvals=pd.DataFrame(np.column_stack([dates.values,netreal,netcum,np.cumprod(1+rets)*netreal[0],rets,amtchg,np.cumsum(amtchg)]),
                                  columns=['Date','NetSingle','NetCumulated','NetCompensated','Returns','AmtChg','AmtCumChg'])
             sql.to_sql(netvals,name='Net_Values',con=conn_net,if_exists='replace')
-            print(time.time()-start)
             print('Netvalues updated from '+firstdate+' to '+dates.values[-1])
         w.close()
 
@@ -349,9 +345,7 @@ class db:
 
 
     def take_netvalue(self,startdate=False,enddate=False,freq='DAY',indicators=True,plots=True,mktidx=('000300.SH','000905.SH'),outputdir=False):
-        start=time.time()
         w.start()
-        print(time.time()-start)
         with db_connect(self.netvaldir) as conn_net:
             if not startdate:
                 startdate=self.ipodate.strftime('%Y%m%d')
@@ -369,13 +363,17 @@ class db:
                 period='D'
             ttimes=w.tdays(head,tail,'Period='+period).Times
             tperiods=[dt.datetime.strftime(t,'%Y%m%d') for t in ttimes]
-            needextra=False
+            needextra=False   # 使用周度、月度数据的情况下，确保第一个值为索取数据第一个 交易日
             if (tperiods[0] > head):
+                tmptimes=w.tdays(head,tperiods[0],'Period=D').Times
+                head=dt.datetime.strftime(tmptimes[0],'%Y%m%d')
                 needextra=True
                 tperiods.insert(0,head)
-            trddata=data[dates.isin(tperiods)]
+            trdidx=dates.isin(tperiods)
+            trddata=data[trdidx]
 
             print('Updating '+self.mandarine+ ' -- Periods from %s to %s' % (tperiods[0],tperiods[-1]))
+            print()
 
             output_results={}
 
@@ -400,6 +398,9 @@ class db:
                 print([u'费后累计净值',u'费前净值'])
                 for key in sorted(indshow.keys()):
                     print(key+' : ',indshow[key] )
+                print()
+                print()
+
                 output_results['indicators']=indshow
 
             netsig=trddata['NetCumulated'].values
