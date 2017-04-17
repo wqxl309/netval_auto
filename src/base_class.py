@@ -281,8 +281,8 @@ class db:
             lastdate=dates.values[-1]
             tdays=w.tdays(firstdate,lastdate).Times
             trddays=pd.DataFrame([dt.datetime.strftime(t,'%Y%m%d') for t in tdays])
-            hastrd=~trddays.isin(dates.values)
-            trdmiss=trddays[hastrd.values]
+            misstrd=~trddays.isin(dates.values)
+            trdmiss=trddays[misstrd.values]
             if not trdmiss.empty:
                 # 截止到第一个缺失交易日前的一个交易日
                 cutdate=dt.datetime.strftime(w.tdaysoffset(-1,trdmiss.values[0][0]).Times[0],'%Y%m%d')
