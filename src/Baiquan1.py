@@ -4,7 +4,7 @@ from src.base_class import *
 
 class Baiquan1_db(db):
     def __init__(self,netvaldir=r'E:\netval_auto\netvalue\NetvalBQ1.db'):
-        dbdirBQ1=r'E:\netval_auto\database\Baiquan1.db'
+        dbdirBQ1=r'.\database\Baiquan1.db'
         filedirBQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉一号'+'\\'
         flistdirBQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉一号\list.txt'
         super(Baiquan1_db,self).__init__(dbdirBQ1,filedirBQ1,flistdirBQ1,netvaldir)

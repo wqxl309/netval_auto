@@ -3,7 +3,7 @@ from src.base_class import *
 
 class Huijin1_db(db):
     def __init__(self,netvaldir=r'E:\netval_auto\netvalue\NetvalHJ1.db'):
-        dbdirHJ1=r'E:\netval_auto\database\Huijin1.db'
+        dbdirHJ1=r'.\database\Huijin1.db'
         filedirHJ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号'+'\\'
         flistdirHJ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉汇瑾一号\list.txt'
         super(Huijin1_db,self).__init__(dbdirHJ1,filedirHJ1,flistdirHJ1,netvaldir)

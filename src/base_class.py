@@ -7,7 +7,8 @@ import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpdt
-from WindPy import *
+# from WindPy import *
+from remotewind import w
 from pandas.io import sql
 from src.help_functions import *
 import time

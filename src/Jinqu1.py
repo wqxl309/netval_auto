@@ -3,7 +3,7 @@ from src.base_class import *
 
 class Jinqu1_db(db):   # 进取和百泉1号相似较大
     def __init__(self,netvaldir=r'E:\netval_auto\netvalue\NetvalJQ1.db'):
-        dbdirJQ1=r'E:\netval_auto\database\Jinqu1.db'
+        dbdirJQ1=r'.\database\Jinqu1.db'
         filedirJQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉进取一号'+'\\'
         flistdirJQ1=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 百泉进取一号\list.txt'
         super(Jinqu1_db,self).__init__(dbdirJQ1,filedirJQ1,flistdirJQ1,netvaldir)

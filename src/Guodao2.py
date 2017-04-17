@@ -2,7 +2,7 @@ from src.base_class import *
 
 class Guodao2_db(db):
     def __init__(self,netvaldir=r'E:\netval_auto\netvalue\NetvalGD2.db'):
-        dbdirGD2=r'E:\netval_auto\database\Guodao2.db'
+        dbdirGD2=r'\database\Guodao2.db'
         filedirGD2=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 国道砺石二号'+'\\'
         flistdirGD2=r'C:\Users\Jiapeng\Desktop\Net Value\估值信息 国道砺石二号\list.txt'
         super(Guodao2_db,self).__init__(dbdirGD2,filedirGD2,flistdirGD2,netvaldir)

@@ -35,9 +35,11 @@ def GetNetValues(products,outdir,startdate=False,enddate=False,freq='week',indic
         output_results[tbk]['outdata'].to_excel(writer,sheet_name=tbk,index=False)
         if needind:
             temp=output_results[tbk]['indicators']
+            title=temp.pop('ValueType')
             inddata=pd.DataFrame.from_dict(temp,orient='index')
+            inddata.columns=title
             inddata.sort_index()
-            inddata.to_excel(writer_ind,sheet_name=tbk,index=False)
+            inddata.to_excel(writer_ind,sheet_name=tbk,index=True)
     writer.save()
     if needind:
         writer_ind.save()
