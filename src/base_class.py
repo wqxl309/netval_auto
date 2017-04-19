@@ -39,7 +39,7 @@ class db:
         self.dbdir=dbdir
         self.filedir=filedir
         self.flistdir=flistdir
-        self.netvaldir=netvaldir
+        self.netvaldir=netvaldir   # 不要再次创建 netval db if not exists
 
     def dbexist(self):
         # 若db不存在则不能写入table,创建db在updatetable 中实现
