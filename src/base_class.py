@@ -392,7 +392,7 @@ class db:
                 indshow['WinRate']=raw['winrate']
                 indshow['MaxWinsPrd']=raw['maxwinsnum']
                 indshow['MaxLossPrd']=raw['maxlossnum']
-                earnamt=trddata['AmtCumChg'][1:].values-trddata['AmtCumChg'][:-1].values
+                #earnamt=trddata['AmtCumChg'][1:].values-trddata['AmtCumChg'][:-1].values
                 #indshow['WinLossRate']=-np.sum(earnamt[earnamt>0])/np.sum(earnamt[earnamt<0])
                 indshow['ValueType']=[u'费后累计净值',u'费前净值']
                 print([u'费后累计净值',u'费前净值'])
@@ -400,7 +400,6 @@ class db:
                     print(key+' : ',indshow[key] )
                 print()
                 print()
-
                 output_results['indicators']=indshow
 
             netsig=trddata['NetCumulated'].values
@@ -463,10 +462,12 @@ class db:
             if outputdir:
                 if mktidx:
                     trdselect=trddata.loc[:,['Date','NetSingle','NetCumulated','NetCompensated']]
+                    trdselect.columns = ['日期','单位净值','累计净值','补回净值']
                     mktidxdata=pd.DataFrame(idxdata,columns=mktidx,index=trdselect.index)
                     output=pd.concat([trdselect,mktidxdata],axis=1)
                 else:
                     output=trddata.loc[:,['Date','NetSingle','NetCumulated','NetCompensated']]
+                    output.columns = ['日期','单位净值','累计净值','补回净值']
                 if outputdir=='return data':
                     output_results['outdata']=output
                 else:

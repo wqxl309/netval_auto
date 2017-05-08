@@ -51,10 +51,3 @@ def sqlite_to_excel(filedir,sheetname,overwirte=True):
     file=xlrd.open_workbook(filedir)
 
 
-if __name__=='__main__':
-    outdir=r'C:\Users\Jiapeng\Desktop\BQ1.xlsx'
-    data = xlrd.open_workbook('outdir')
-    try:
-        table = data.sheet_by_name(u'b')
-    except xlrd.biffh.XLRDError as e:
-        print(e)

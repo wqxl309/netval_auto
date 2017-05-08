@@ -1,10 +1,9 @@
-from src.Baiquan1 import *
-from src.Jinqu1 import *
-from src.Huijin1 import *
-from src.Baiquan2 import *
-from src.Guodao2 import *
 import pandas as pd
-
+from products.Baiquan1 import *
+from products.Guodao2 import *
+from products.Huijin1 import *
+from products.Jinqu1 import *
+from products.Baiquan2 import *
 
 
 def GetNetValues(products,outdir,startdate=False,enddate=False,freq='week',mktidx=False,indicators=False,plots=False):
