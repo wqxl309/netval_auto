@@ -1,16 +1,18 @@
+import datetime as dt
+import os
+import time
 
 import sqlite3
-import os
 import pandas as pd
-import numpy as np
-import datetime as dt
+from pandas.io import sql
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpdt
-# from WindPy import *
+import numpy as np
 from remotewind import w
-from pandas.io import sql
+# from WindPy import *
+
 from src.help_functions import *
-import time
+
 
 __metaclass__ = type
 

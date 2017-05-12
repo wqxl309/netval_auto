@@ -1,7 +1,8 @@
-import numpy as np
+
 import xlrd
 import xlwt
 
+import numpy as np
 
 def calc_indicators(netvals):
     """ returns order: mean,std,downstd,winrate,maxdd,maxwins,maxlosses"""
