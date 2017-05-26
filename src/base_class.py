@@ -5,6 +5,7 @@ import time
 import sqlite3
 import pandas as pd
 from pandas.io import sql
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpdt
 import numpy as np
@@ -13,16 +14,16 @@ from remotewind import w
 
 from src.help_functions import *
 
-
 __metaclass__ = type
-
 
 class db_connect:
     def __init__(self,dbdir):
         self.dbdir=dbdir
+
     def __enter__(self):
         self.connection=sqlite3.connect(self.dbdir)
         return self.connection
+
     def __exit__(self,exc_type,exc_instantce,traceback):
         self.connection.close()
         return False  # pop up errors
@@ -30,22 +31,30 @@ class db_connect:
 
 class db:
 
-    def __init__(self,dbdir,filedir,flistdir,netvaldir):
+    def __init__(self,dbdir,filedir,savedlist,netvaldir):
+        """
+        dbdir ： 存储估值表表格的数据库
+        filedir : 存储估值表文件的文件夹
+        savedlist : 存储已存入数据库的估值表名称的文件 .txt ， 位于filedir中
+        netvaldir : 存储从估值表中提取的基础字段、以及由此计算的净值的表格的数据库
+        """
         self.productname=None
         self.mandarine=None
         self.ipodate=None
         self.confirmdays=None
         self.net_digits=None
-        if not os.path.exists(flistdir):
+        if not os.path.exists(savedlist):  # 如果savedlist 不存在，则创建一个
             os.system('type null > '+filedir)
         self.dbdir=dbdir
         self.filedir=filedir
-        self.flistdir=flistdir
+        self.savedlist=savedlist
         self.netvaldir=netvaldir   # 不要再次创建 netval db if not exists
 
-    def dbexist(self):
-        # 若db不存在则不能写入table,创建db在updatetable 中实现
-        return os.path.exists(self.dbdir)
+    def dbexist(self,checkdb=None):
+        """ 检查数据库是否存在，若db不存在则不能写入table,创建db在updatetable 中实现"""
+        if not checkdb:
+            checkdb = self.dbdir
+        return os.path.exists(checkdb)
 
     def get_tablename(self,tbdir):
         raise Exception('Derived classes have to realize this method')
@@ -53,32 +62,33 @@ class db:
     def get_tbtitles(self,tbdir):
         raise Exception('Derived classes have to realize this method')
 
-    def tbindb(self,tbdir):
-        # 检测数据库中是否已存在某一个表
-        # table 不存在则不能调用 write_table
+    def table_in_db(self,tablename):
+        """ 检测数据库中是否已存在某一个表,table 不存在则不能调用 write_table """
         with db_connect(self.dbdir) as conn:
             c=conn.cursor()
             exeline='SELECT name FROM sqlite_master WHERE type=\'table\' '
             c.execute(exeline)
             alltables=c.fetchall()
-            tbname=(self.get_tablename(tbdir),)
-        return tbname in alltables
+        return tablename in alltables
 
     def write_table(self,tbdir):
+        """ 将估值表 写入 数据库
         # 写入前数据库必须存在
         # 写入失败则删除表格
+        """
         hasdb=os.path.exists(self.dbdir)  # 写入前数据库必须存在，数据库的建立在方法外实现
         if not hasdb:
             print('Database does NOT exist, no update!')
-            return False
+            return
         tbname=self.get_tablename(tbdir)
-        hastb=self.tbindb(tbdir)
+        hastb=self.table_in_db(tablename=tbname)
         if hastb:
             print(tbname+' already exists, no update!')
-            return False
-        # 寻找起始行
+            return
+        # 读取估值表文件
         data=xlrd.open_workbook(tbdir)
         table = data.sheets()[0]
+        # 寻找正表起始行， 表头杂乱的东西通过继承的产品类来处理，包括寻找title
         startline=0
         for dumi in range(table.nrows):
             try:
@@ -94,9 +104,9 @@ class db:
                 startline=dumi
                 break
         # 开始写入table
-        #conn=sqlite3.connect(self.dbdir)
         with db_connect(self.dbdir) as conn:
             c=conn.cursor()
+
             tablename=self.get_tablename(tbdir)
             titles=self.get_tbtitles(tbdir)
             titlenum=len(titles)
@@ -109,9 +119,11 @@ class db:
                 else:
                     titlestr.append(tl)
             titletrans=''.join(titlestr)[:-1]
+
             exeline=''.join(['CREATE TABLE ',tablename,' (',titletrans,') '])
             c.execute(exeline)
             print('Table '.join([tablename,' created!']))
+
             try:
                 for dumi in range(startline,table.nrows):
                     exeline=''.join(['INSERT INTO ',tablename,' VALUES (',('?,'*titlenum)[0:(2*titlenum-1)],')'])
@@ -127,10 +139,10 @@ class db:
 
 
     def update_tables(self):
-        # 检查是否有新文件，如有则更新,并把更新后的文件写入到 flistdir 中
+        # 检查是否有新文件，如有则更新,并把更新后的文件写入到 savedlist 中
         # 检查新增加的文件
-        filelist_w=open(self.flistdir,'a+')
-        filelist_r=open(self.flistdir)
+        filelist_w=open(self.savedlist,'a+')
+        filelist_r=open(self.savedlist)
         try:
             files=filelist_r.readlines()
             savedtbs=set([tb.strip() for tb in files])
@@ -166,7 +178,6 @@ class db:
         if not os.path.exists(self.dbdir):
             print('Data db does NOT exist!')
             return False
-        #conn_db=sqlite3.connect(self.dbdir)
         # 提取数据库中已经存储的估值表列表
         with db_connect(self.dbdir) as conn_db:
             cd=conn_db.cursor()
@@ -174,7 +185,6 @@ class db:
         # 提取当前已储存过的表的table(统一命名为 Processed_Tables),存储于netval数据库（在调用该函数的时候默认其已经存在，否侧报错），如果netval数据库存在则该表必须存在，否则报错
         if not os.path.exists(self.netvaldir):
             raise Exception('Netval db does NOT exist!')
-        #conn_net=sqlite3.connect(self.netvaldir)
         processed=[]
         with db_connect(self.netvaldir) as conn_net:
             cn=conn_net.cursor()
@@ -425,6 +435,7 @@ class db:
                 plotlimits=[np.min(netsig)*0.8,np.min(netcum)*1.2]
 
             if plots:
+                mpl.rcParams['font.sans-serif'] = ['SimHei'] #用来正常显示中文标签
                 fig=plt.figure(figsize=(20,15))
                 showdatenum=20
                 N=len(netdate)

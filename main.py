@@ -3,6 +3,7 @@ from products.Guodao2 import *
 from products.Huijin1 import *
 from products.Jinqu1 import *
 from products.Baiquan2 import *
+from products.Baiquan_strategy1 import *
 
 if __name__=='__main__':
     obj=Baiquan1_db()
@@ -14,6 +15,8 @@ if __name__=='__main__':
     # outdir=r'C:\Users\Jiapeng\Desktop\BQ2.csv'
     # obj=Guodao2_db()
     # outdir=r'C:\Users\Jiapeng\Desktop\GD2.csv'
+
+    # obj = Baiquan_strategy1_db()
 
     obj.update_tables()
     obj.update_netval_data()
