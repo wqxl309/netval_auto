@@ -3,12 +3,9 @@ from modules.database_assistant.database_assistant import *
 
 class netvalues_base:
     """ 从已存储到数据库的估值表中，提取信息并计算净值的类 """
-    def __init__(self,dbdir,netdir,ipodate,precision,confirmdays):
+    def __init__(self,dbdir,netdbdir):
         self._dbdir = dbdir               # 存储估值表信息的数据库
-        self._netdir = netdir             # 存储净值信息的数据库
-        self.ipodate = ipodate            # 存储产品初始日期
-        self.precision = precision        # 存储估值表中净值精度 （小数点后位数）
-        self.confirmdays = confirmdays    # 认购赎回确认日
+        self._netdbdir = netdbdir             # 存储净值信息的数据库
 
     def get_newtables(self):
         """
@@ -18,7 +15,7 @@ class netvalues_base:
             temp = db.get_db_tablenames()
             temp.remove('SAVED_TABLES')
             savedtbs = set(temp)
-        with db_assistant(dbdir=self._netdir) as netdb:
+        with db_assistant(dbdir=self._netdbdir) as netdb:
             cursor = netdb.connection.cursor()
             netdb.create_db_table(tablename='PROCESSED_TABLES',titles=['TableNames TEXT'],replace=False)
             temp = cursor.execute('SELECT * FROM PROCESSED_TABLES')
@@ -51,7 +48,7 @@ class netvalues_base:
                     valmark = col
                     break
             if not valmark:
-                raise Exception('在表格 %s 中没有匹配到存储数值的列')
+                raise Exception('在表格 %s 中没有匹配到存储数值的列' %tablename)
             cursor = db.connection.cursor()
             exeline=''.join(['SELECT ',indexmark,',',valmark,' FROM ',tablename])
             temp = cursor.execute(exeline).fetchall()  # 提取 indexmark 列对应的值
@@ -60,7 +57,7 @@ class netvalues_base:
                 if rowname in rev_codedict:
                     output_dict[rev_codedict[rowname]] = row[1]
         filedate = tablename[-8:]
-        with db_assistant(self._netdir) as netdb:
+        with db_assistant(self._netdbdir) as netdb:
             base_titles = ['date TEXT']
             base_values = [filedate]
             for cd in sorted(output_dict):
@@ -82,10 +79,16 @@ class netvalues_base:
 
     def update_netdb(self,codedict,indexmark='科目代码',valcols=('市值','市值本币')):
         """ 将所有需要更新的表格的基础元素逐一写入数据库 """
+        if not codedict:    # 没有提供codedict
+            print('No codedict provided,not updating')
+            return
         newtables = self.get_newtables()  # 提取还未更新的表格的列表
-        for tablename in newtables:
-            self.table_to_netdb(tablename=tablename,codedict=codedict,indexmark=indexmark,valcols=valcols)
-        print('Updated Net_Values_Base from %s to %s ' %(newtables[0][-8:],newtables[-1][-8:]))
+        if newtables:
+            for tablename in newtables:
+                self.table_to_netdb(tablename=tablename,codedict=codedict,indexmark=indexmark,valcols=valcols)
+            print('Updated Net_Values_Base from %s to %s ' %(newtables[0][-8:],newtables[-1][-8:]))
+        else:
+            print('Netval_db already update to the latest !')
 
     def check_dupicate_netdb(self):
         """ 检查表格中是否有重复日期 """

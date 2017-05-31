@@ -82,6 +82,7 @@ class rawfile_process:
                 titlenum = len(titles)
                 for dumj in range(titlenum):
                     titles[dumj] = titles[dumj].strip(omitchars)   # 逐个删除标题的无效字符
+                    titles[dumj] = titles[dumj].replace(' ','')    # 去除字段中空格
                     titles[dumj] = titles[dumj].replace('-','')    # - 无法被strip what the fuck？
                     if titles[dumj]=='':   # 处理标题为空的情况： 此时dumj-1 对应列应为 市值、估值增值 等
                         titles[dumj] = titles[dumj-1]+'本币'
