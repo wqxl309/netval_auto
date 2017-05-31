@@ -10,7 +10,7 @@ class Guodao2_db(db):
         self.mandarine=u'国道砺石二号'
         self.ipodate=dt.date(2016,12,1)
         self.confirmdays=2
-        self.net_digits=3
+        self.net_digits=4
 
     def get_tablename(self,tbdir):
         strings=tbdir.split('\\')
